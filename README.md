@@ -33,7 +33,8 @@ The start of this document walks you through building a Chrome extension and lau
     - [2.1 Text Replacement](#text-replace)
     - [2.2 Image Replacement](#image-replace)
     - [2.3 Link Replacement](#link-replace)
-    - [2.4 Other Things](#other-things)
+    - [2.4 Advanced Extension](#advanced)
+    - [2.5 Other Things](#other-things)
 -   [Additional Resources](#additionalresources)
 
 ------------------------------
@@ -274,8 +275,22 @@ for (var i = 0; i < links.length; i++) {
 
 Click with care people!
 
+<a id="advanced"></a>
+## 2.4 Advanced Extension
+We are going to build a chrome extension
+
+Things i want to cover;
+- omnibox
+- popup
+- backrgound script
+
+![Diagram](./chrome_extension.png)
+
+### `manifest.json`
+
+
 <a id="other-things"></a>
-### 2.4 Other Things
+### 2.5 Other Things
 The applications we'll This is just one simple `manifest.json` file. There are lots of other attributes you can set, such as [`background`][background], which allows us to run a single script in the background, [`permissions`][permissions], which allow us to ask the user for certain things we may not be able to do withour permission, and [`browser_action`][browser-action], which creates small icons next to the search bar that you can click and have something happen. However, `content_scripts` is what we'll mainly be looking in this tutorial.
 
 My name is [Matt Piccolella][matt-pic] and the GitHub repository for this is available [here][github-repo].
