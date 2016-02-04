@@ -277,17 +277,190 @@ Click with care people!
 
 <a id="advanced"></a>
 ## 2.4 Advanced Extension
-We are going to build a chrome extension
+We are going to build a Chrome Extension which has an icon in the Chrome toolbar. When you click on the icon it will.
 
-Things i want to cover;
-- omnibox
-- popup
-- backrgound script
+### Setting up an icon:
+Let's grab two icons from the web, with the dimensions 128x128 and 38x38. We're going to make an `icons` folder, and place the two icons inside. I named them `icon_38.png` and `icon_128.png`. 
+
+We are going to modify the `manifest.json` in order for Chrome to show the icons. 
+
+```javascript
+{
+    "name": "BrowserExtension",
+    "version": "0.0.1",
+    "manifest_version": 2,
+    "description" : "Description ...",
+    "icons": { "128": "icons/icon_128.png" },
+    "browser_action": {
+        "default_icon": { "38": "icons/icon_38.png" }
+    }
+}
+```
+
+When we install the extension, you'll notice the two icons appear. Nothing will happen when you click on the icon in the chrome toolbar.
+
+### Adding a popup. 
+We now want to add a popup that appears when you click the icon. In order to do so, we will need to modify the `manifest.json` again.
+
+```javascript
+{
+    "name": "BrowserExtension",
+    "version": "0.0.1",
+    "manifest_version": 2,
+    "description" : "Description ...",
+    "icons": { "128": "icons/icon_128.png" },
+    "browser_action": {
+        "default_icon": { "38": "icons/icon_38.png" },
+        "default_title": "That's the tool tip",
+        "default_popup": "browseraction/popup.html"
+    }
+}
+```
+
+The `default_title` is a tooltip that will appear when we ___ the icon. Make a new folder and call it `browseraction`. We also need to code the `popup.html`, which will appear when we click the icon. 
+
+```html
+<div style="width:200px">
+    <button id="button">Color all the divs</button>
+</div>
+```
+
+If you run it again, and click on the icon, you'll see a popup with a button. cool. 
+
+We can also call a `js` file from the popup. Let's add `<script type="text/javascript" src="popup.js"></script>` to `popup.html`, and create a file called `popup.js` in the same dir. 
+
+```javascript
+// popup.js
+window.onload = function() {
+    document.getElementById("button").onclick = function() {
+        console.log('hello')
+    }
+}
+```
+
+This adds a onclick function to our button in the popup, which prints hello to the popup's console. Use `inspect element` to pull up the console. 
+
+### Chrome API's. 
+
+Chrome has an API that gives you access to a variety of features that you wouldn't normally have by injecting vanilla javascript into the webpage, such as accessing the tabs you have open. List of APIs here: https://developer.chrome.com/extensions/api_index. We can't call the API's from the javascript we inject, but from another file which runs in the background of our extension. We will call it `background.js`. 
+
+```javascript
+// listening for an event / one-time requests
+// coming from the popup
+chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+    switch(request.type) {
+        case "color-divs":
+            colorDivs();
+        break;
+    }
+    return true;
+});
+ 
+// send a message to the content script
+var colorDivs = function() {
+    chrome.tabs.getSelected(null, function(tab){
+        chrome.tabs.sendMessage(tab.id, {type: "colors-div", color: "#F00"});
+        // setting a badge
+        chrome.browserAction.setBadgeText({text: "red!"});
+    });
+}
+```
+
+We are also going to need our `content.js` file.
+
+```javascript
+chrome.extension.onMessage.addListener(function(message, sender, sendResponse) {
+    switch(message.type) {
+        case "colors-div":
+            var divs = document.querySelectorAll("div");
+            if(divs.length === 0) {
+                alert("There are no any divs in the page.")
+            } else {
+                for(var i=0; i< divs.length; i++) {
+                    divs[i].style.backgroundColor = message.color;
+                }
+            }
+        break;
+    }
+});
+```
+
+And finally modify `manifest.json` to require `background.js` and `content.js`.
+
+```javascript
+{
+    "name": "BrowserExtension",
+    "version": "0.0.1",
+    "manifest_version": 2,
+    "description" : "Description ...",
+    "icons": { "128": "icons/128x128.png" },
+    "browser_action": {
+        "default_icon": { "38": "icons/38x38.png" },
+        "default_title": "That's the tool tip",
+        "default_popup": "browseraction/popup.html"
+    },
+    "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+    },
+    "content_scripts": [{
+        "matches": ["http://*/*", "https://*/*"],
+        "js": ["content.js"]
+    }]
+}
+```
+
+This diagram illustrates how our files communicate:
 
 ![Diagram](./chrome_extension.png)
 
-### `manifest.json`
+### Bonus points: Omnibox
 
+The omnibox is the keyword which is shown inside Chrome's address bar. We can customize our extension to call different functions depending on what you type into the omnibox. 
+
+We are going to modify our `manifest.json`: 
+
+```javascript
+{
+    "name": "BrowserExtension",
+    "version": "0.0.1",
+    "manifest_version": 2,
+    "description" : "Description ...",
+    "icons": { "128": "icons/128x128.png" },
+    "omnibox": { "keyword" : "yeah" },
+    "browser_action": {
+        "default_icon": { "38": "icons/38x38.png" },
+        "default_title": "That's the tool tip",
+        "default_popup": "browseraction/popup.html"
+    },
+    "background": {
+      "scripts": ["background.js"],
+      "persistent": false
+    },
+    "content_scripts": [{
+        "matches": ["http://*/*", "https://*/*"],
+        "js": ["content.js"]
+    }]
+}
+```
+
+And let's have it call the `colorDivs()` function from `background.js`:
+
+```javascript
+// omnibox
+chrome.omnibox.onInputChanged.addListener(function(text, suggest) {
+    suggest([
+      {content: "color-divs", description: "Make everything red"}
+    ]);
+});
+chrome.omnibox.onInputEntered.addListener(function(text) {
+    if(text == "color-divs") colorDivs();
+});
+```
+
+Let's try it out. Go to `google.com` and type `yeah` into the omnibox. 
+
+Original tutorial here: https://developer.chrome.com/extensions/api_index
 
 <a id="other-things"></a>
 ### 2.5 Other Things
